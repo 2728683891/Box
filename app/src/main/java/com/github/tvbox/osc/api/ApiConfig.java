@@ -333,14 +333,14 @@ public class ApiConfig {
             sb.setPlayerType(DefaultConfig.safeJsonInt(obj, "playerType", -1));
             sb.setCategories(DefaultConfig.safeJsonStringList(obj, "categories"));
             sb.setClickSelector(DefaultConfig.safeJsonString(obj, "click", ""));
-            if (firstSite == null)
+            if (firstSite == null && sb.getHide() == 0)
                 firstSite = sb;
             sourceBeanList.put(siteKey, sb);
         }
         if (sourceBeanList != null && sourceBeanList.size() > 0) {
             String home = Hawk.get(HawkConfig.HOME_API, "");
             SourceBean sh = getSource(home);
-            if (sh == null)
+            if (sh == null || sh.getHide() == 1)
                 setSourceBean(firstSite);
             else
                 setSourceBean(sh);
@@ -512,8 +512,8 @@ public class ApiConfig {
                         hosts.add(host.getAsString());
                     }
                 } else continue;
-                if (obj.has("rule")) {
-                    JsonArray ruleJsonArr = obj.getAsJsonArray("rule");
+                if (obj.has("rule") || obj.has("regex")) {
+                    JsonArray ruleJsonArr = obj.has("regex")?obj.getAsJsonArray("regex"):obj.getAsJsonArray("rule");
                     ArrayList<String> rule = new ArrayList<>();
                     for (JsonElement one : ruleJsonArr) {
                         String oneRule = one.getAsString();
