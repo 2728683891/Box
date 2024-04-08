@@ -80,6 +80,7 @@ import com.github.tvbox.osc.util.M3U8;
 import com.github.tvbox.osc.util.MD5;
 import com.github.tvbox.osc.util.PlayerHelper;
 import com.github.tvbox.osc.util.StringUtils;
+import com.github.tvbox.osc.util.SubtitleHelper;
 import com.github.tvbox.osc.util.VideoParseRuler;
 import com.github.tvbox.osc.util.XWalkUtils;
 import com.github.tvbox.osc.util.thunder.Jianpian;
@@ -170,6 +171,12 @@ public class PlayFragment extends BaseLazyFragment {
                 if (msg.what == 100) {
                     stopParse();
                     errorWithRetry("嗅探错误", false);
+                } else if (msg.what == 200) {
+                    if (mHandler.hasMessages(100)) {
+                        setTip("加载完成，嗅探视频中", true, false);
+                    }
+                } else if (msg.what == 300) {
+                    setTip((String)msg.obj, false, true);
                 }
                 return false;
             }
@@ -297,6 +304,7 @@ public class PlayFragment extends BaseLazyFragment {
 
         });
         mVideoView.setVideoController(mController);
+        mVideoView.setmHandler(mHandler);
     }
 
     //设置字幕
@@ -384,13 +392,7 @@ public class PlayFragment extends BaseLazyFragment {
     }
 
     void setSubtitleViewTextStyle(int style) {
-        if (style == 0) {
-            mController.mSubtitleView.setTextColor(getContext().getResources().getColorStateList(R.color.color_FFFFFF));
-            mController.mSubtitleView.setShadowLayer(3, 2, 2, R.color.color_000000_80);
-        } else if (style == 1) {
-            mController.mSubtitleView.setTextColor(getContext().getResources().getColorStateList(R.color.color_FFB6C1));
-            mController.mSubtitleView.setShadowLayer(3, 2, 2, R.color.color_FFFFFF);
-        }
+        SubtitleHelper.upTextStyle(mController.mSubtitleView,style);
     }
 
     void selectMyInternalSubtitle() {
@@ -836,6 +838,10 @@ public class PlayFragment extends BaseLazyFragment {
                             subtitle.content = ss.toString();
                             mController.mSubtitleView.onSubtitleChanged(subtitle);
                         }
+                    }else{
+                        Subtitle subtitle = new Subtitle();
+                        subtitle.content = "";
+                        mController.mSubtitleView.onSubtitleChanged(subtitle);
                     }
                 }
             });
@@ -944,6 +950,9 @@ public class PlayFragment extends BaseLazyFragment {
                                 headers.put(key, hds.getString(key));
                                 if (key.equalsIgnoreCase("user-agent")) {
                                     webUserAgent = hds.getString(key).trim();
+                                } else if (key.equalsIgnoreCase("cookie")) {
+                                    for (String split : hds.getString(key).split(";"))
+                                        CookieManager.getInstance().setCookie(url, split.trim());
                                 }
                             }
                             webHeaderMap = headers;
@@ -1030,6 +1039,7 @@ public class PlayFragment extends BaseLazyFragment {
     public void onPause() {
         super.onPause();
         if (mVideoView != null) {
+            getVodController().mProgressTop.setAlpha(0);
             mVideoView.pause();
         }
     }
@@ -1038,6 +1048,7 @@ public class PlayFragment extends BaseLazyFragment {
     public void onResume() {
         super.onResume();
         if (mVideoView != null) {
+            getVodController().mProgressTop.setAlpha(1);
             mVideoView.resume();
         }
     }
@@ -1799,6 +1810,8 @@ public class PlayFragment extends BaseLazyFragment {
             if (!click.isEmpty()) {
                 mSysWebView.loadUrl("javascript:" + click);
             }
+
+            mHandler.sendEmptyMessage(200);
         }
 
         WebResourceResponse checkIsVideo(String url, HashMap<String, String> headers) {
